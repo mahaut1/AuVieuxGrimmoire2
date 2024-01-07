@@ -33,7 +33,6 @@ exports.createBook = async (req, res, next) => {
         ...JSON.parse(req.body.book),
         imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
     } : { ...req.body };
-  
     delete bookObject._userId;
     Book.findOne({_id: req.params.id})
         .then((book) => {
@@ -76,6 +75,7 @@ exports.createBook = async (req, res, next) => {
   }
 
   exports.getOneBook= (req, res, next) => {
+    bookId = req.params.id; 
     Book.findOne({ _id: req.params.id })
       .then(book => res.status(200).json(book))
       .catch(error => res.status(404).json({ error }));
@@ -85,7 +85,7 @@ exports.createBook = async (req, res, next) => {
     console.log('Params ID:', req.params.id);
     console.log('BookID:', req.params.id);
     const { userId, rating } = req.body;
-  
+    console.log('UserID:', userId);
     try {
       const book = await Book.findOne({ _id: req.params.id });
       console.log('Book:', book);
@@ -99,7 +99,7 @@ exports.createBook = async (req, res, next) => {
         return res.status(400).json({ message: 'L\'utilisateur a déjà noté ce livre' });
       }
   
-      book.ratings.push({ userId, grade: rating });
+      book.ratings.push({bookId: book._id, userId, grade: rating, id:book._id });
       console.log('Updated Ratings:', book.ratings);
       const totalRatings = book.ratings.length;
       let totalRatingSum = 0;
@@ -116,6 +116,7 @@ exports.createBook = async (req, res, next) => {
       console.log('Updated Book:', book);
       res.status(200).json({ message: 'Notation enregistrée avec succès', book });
     } catch (error) {
+      console.error('Erreur lors de la notation du livre:', error);
       res.status(500).json({ error: 'Erreur lors de la notation du livre' });
     }
   };
@@ -124,8 +125,8 @@ exports.createBook = async (req, res, next) => {
 exports.getTopRatedBooks = async (req, res, next) => {
   try {
     const topRatedBooks = await Book.aggregate([
-      { $sort: { averageRating: -1 } }, // Trie par note moyenne décroissante
-      { $limit: 3 } // Limite les résultats à 3 livres
+      { $sort: { averageRating: -1 } }, 
+      { $limit: 3 } 
     ]);
     res.status(200).json(topRatedBooks);
   } catch (error) {
