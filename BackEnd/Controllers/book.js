@@ -80,45 +80,32 @@ exports.createBook = async (req, res, next) => {
       .then(book => res.status(200).json(book))
       .catch(error => res.status(404).json({ error }));
   }
-  exports.rateBook = async (req, res, next) => {
-    console.log('Body:', req.body); 
-    console.log('Params ID:', req.params.id);
-    console.log('BookID:', req.params.id);
-    const { userId, rating } = req.body;
-    console.log('UserID:', userId);
-    try {
-      const book = await Book.findOne({ _id: req.params.id });
-      console.log('Book:', book);
-      console.log('Retrieved Book:', book);
-      if (!book) {
-        return res.status(404).json({ message: 'Livre non trouvé' });
-      }
+  exports.rateBook = (req, res, next) => {
+    Book.findOne({ _id: req.params.id })
+      .then((book) => {
+        if (book.userId != req.auth.userId) {
+          if (book.ratings.find((rating) => rating.userId === req.auth.userId)) {
+            return res
+              .status(401)
+              .json({ message: "Vous avez déjà noté ce livre !" });
+          }
   
-      const userRating = book.ratings.find((r) => r.userId === userId);
-      if (userRating) {
-        return res.status(400).json({ message: 'L\'utilisateur a déjà noté ce livre' });
-      }
+          const newRating = {
+            userId: req.auth.userId,
+            grade: req.body.rating,
+          };
+          book.ratings.push(newRating);
+          let averageRating =
+            book.ratings.reduce((acc, rating) => {
+              return acc + rating.grade;
+            }, 0) / book.ratings.length;
+          book.averageRating = averageRating;
+          return book.save();
+        }
+      })
+      .then((book) => res.status(200).json(book))
   
-      book.ratings.push({bookId: book._id, userId, grade: rating, id:book._id });
-      console.log('Updated Ratings:', book.ratings);
-      const totalRatings = book.ratings.length;
-      let totalRatingSum = 0;
-  
-      book.ratings.forEach((r) => {
-        totalRatingSum += r.grade;
-        console.log('Total Ratings Sum:', totalRatingSum);
-      });
-  
-      const averageRating = totalRatingSum / totalRatings;
-      console.log('New Average Rating:', averageRating);
-      book.averageRating = averageRating;
-      await book.save();
-      console.log('Updated Book:', book);
-      res.status(200).json({ message: 'Notation enregistrée avec succès', book });
-    } catch (error) {
-      console.error('Erreur lors de la notation du livre:', error);
-      res.status(500).json({ error: 'Erreur lors de la notation du livre' });
-    }
+      .catch((error) => res.status(404).json({ error }));
   };
 
   
