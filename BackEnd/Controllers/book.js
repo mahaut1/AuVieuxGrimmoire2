@@ -89,7 +89,6 @@ exports.createBook = async (req, res, next) => {
               .status(401)
               .json({ message: "Vous avez déjà noté ce livre !" });
           }
-  
           const newRating = {
             userId: req.auth.userId,
             grade: req.body.rating,
